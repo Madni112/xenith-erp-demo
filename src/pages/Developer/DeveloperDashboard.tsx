@@ -695,8 +695,8 @@ const DeveloperDashboard: React.FC = () => {
       // 1. Create User in Supabase Auth with allowed modules and role
       // Create a secondary client so we don't log out the active session
       const secondaryAuthClient = createClient(
-        import.meta.env.VITE_SUPABASE_URL || 'https://syhxwmnplpkahdzuhvke.supabase.co',
-        import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_hKvy4zp9j38H712lDOj4Fw_mUiYQAIK',
+        import.meta.env.VITE_SUPABASE_URL || 'https://zzjxukhrhvmuxxznjbos.supabase.co',
+        import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_1rECaTLSxzwonvR12iOOKQ_XEI8wqCb',
         { auth: { persistSession: false, autoRefreshToken: false } }
       );
       
@@ -733,7 +733,7 @@ const DeveloperDashboard: React.FC = () => {
 
         if (tenantErr) {
           console.warn('Upsert fallback to insert:', tenantErr);
-          await supabase.from('tenants').insert([
+          const { error: insertErr } = await supabase.from('tenants').insert([
             {
               name: newEmployee.name.trim(),
               slug: cleanSlug,
@@ -744,9 +744,14 @@ const DeveloperDashboard: React.FC = () => {
               location_id: newEmployee.role === 'Warehouse Manager' && newEmployee.location_id ? Number(newEmployee.location_id) : null,
             },
           ]);
+          if (insertErr) {
+            console.error('Tenants table insert error:', insertErr);
+            toast.error(`Auth user created, but could not save profile to 'tenants' table: ${insertErr.message}`);
+          }
         }
-      } catch (err) {
-        console.warn('Tenants table upsert:', err);
+      } catch (err: any) {
+        console.error('Tenants table upsert exception:', err);
+        toast.error(`Profile record error: ${err.message || err}`);
       }
 
       // 3. Auto-link Salesman role to Salesmen directory
