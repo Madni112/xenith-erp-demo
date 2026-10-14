@@ -1,6 +1,6 @@
 -- ====================================================================
--- XENITH ERP / NHT ENTERPRISE - DEMO DATABASE MASTER SETUP
--- Target Database: https://syhxwmnplpkahdzuhvke.supabase.co
+-- XENITH ERP / NHT ENTERPRISE - UNIVERSAL MASTER DATABASE SETUP
+-- Safe for brand new databases AND existing databases with older schemas
 -- ====================================================================
 
 -- 1. Enable Required Extensions
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS public.companies (
 CREATE TABLE IF NOT EXISTS public.customers (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    "customerName" VARCHAR(255) NOT NULL,
+    "customerName" VARCHAR(255),
     customername VARCHAR(255),
     customer_code VARCHAR(64),
     "customerCode" VARCHAR(64),
@@ -45,10 +45,12 @@ CREATE TABLE IF NOT EXISTS public.customers (
     coa_code VARCHAR(64),
     page_no VARCHAR(64),
     "pageNo" VARCHAR(64),
-    registrationType VARCHAR(64) DEFAULT 'Retail / General',
+    "registrationType" VARCHAR(64) DEFAULT 'Retail / General',
+    registrationtype VARCHAR(64) DEFAULT 'Retail / General',
     "primaryPhone" VARCHAR(64),
     phone VARCHAR(64),
-    secondaryPhone VARCHAR(64),
+    "secondaryPhone" VARCHAR(64),
+    secondaryphone VARCHAR(64),
     email VARCHAR(128),
     website VARCHAR(255),
     address TEXT,
@@ -67,27 +69,36 @@ CREATE TABLE IF NOT EXISTS public.customers (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 5. CUSTOMER RECOVERIES
 CREATE TABLE IF NOT EXISTS public.customer_recoveries (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
     customer_id BIGINT,
     customer_name VARCHAR(255),
     amount NUMERIC(15, 2) DEFAULT 0.00,
-    recovery_date DATE DEFAULT CURRENT_DATE,
-    bank_id BIGINT,
-    receipt_no VARCHAR(64),
+    recovery_code VARCHAR(64),
+    date DATE DEFAULT CURRENT_DATE,
+    payment_mode VARCHAR(64) DEFAULT 'Cash',
+    bank_account VARCHAR(128),
+    reference_no VARCHAR(128),
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. VENDORS / SUPPLIERS
+-- 6. VENDORS / SUPPLIERS
 CREATE TABLE IF NOT EXISTS public.vendors (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    vendor_name VARCHAR(255) NOT NULL,
+    vendor_name VARCHAR(255),
+    name VARCHAR(255),
     company_name VARCHAR(255),
     vendor_code VARCHAR(64),
+    "vendorCode" VARCHAR(64),
     page_no VARCHAR(64),
+    "pageNo" VARCHAR(64),
+    contact_name VARCHAR(128),
+    cell_no VARCHAR(64),
+    phone_no VARCHAR(64),
     phone VARCHAR(64),
     email VARCHAR(128),
     address TEXT,
@@ -100,20 +111,19 @@ CREATE TABLE IF NOT EXISTS public.vendors (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. INVENTORY: CATEGORIES, BRANDS, FINISHES, LOCATIONS & UOM
+-- 7. INVENTORY MASTER TABLES
 CREATE TABLE IF NOT EXISTS public.inventory_categories (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL,
     description TEXT,
-    parent_id BIGINT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.inventory_brands (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL,
     description TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -121,7 +131,7 @@ CREATE TABLE IF NOT EXISTS public.inventory_brands (
 CREATE TABLE IF NOT EXISTS public.inventory_surface_finishes (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL,
     description TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -129,7 +139,8 @@ CREATE TABLE IF NOT EXISTS public.inventory_surface_finishes (
 CREATE TABLE IF NOT EXISTS public.inventory_locations (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    location_type VARCHAR(64) DEFAULT 'Warehouse',
     address TEXT,
     description TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -139,13 +150,12 @@ CREATE TABLE IF NOT EXISTS public.inventory_uom (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
     short_code VARCHAR(32) NOT NULL,
-    full_name VARCHAR(128) NOT NULL,
-    category VARCHAR(64) DEFAULT 'Count & Units',
-    is_active BOOLEAN DEFAULT TRUE,
+    full_name VARCHAR(64) NOT NULL,
+    category VARCHAR(64) DEFAULT 'General',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 7. PRODUCTS & STOCK
+-- 8. PRODUCTS & STOCK
 CREATE TABLE IF NOT EXISTS public.products (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
@@ -161,6 +171,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     profit NUMERIC(15, 2) DEFAULT 0.00,
     purchase_price NUMERIC(15, 2) DEFAULT 0.00,
     retail_price NUMERIC(15, 2) DEFAULT 0.00,
+    sales_price NUMERIC(15, 2) DEFAULT 0.00,
     mrp NUMERIC(15, 2) DEFAULT 0.00,
     current_stock NUMERIC(15, 2) DEFAULT 0.00,
     min_stock_alert NUMERIC(15, 2) DEFAULT 5.00,
@@ -179,51 +190,73 @@ CREATE TABLE IF NOT EXISTS public.opening_stocks (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
     product_id BIGINT,
-    location_id BIGINT,
-    quantity NUMERIC(15, 2) DEFAULT 0.00,
-    cost_price NUMERIC(15, 2) DEFAULT 0.00,
-    retail_price NUMERIC(15, 2) DEFAULT 0.00,
+    product_name VARCHAR(255),
+    "itemName" VARCHAR(255),
+    warehouse_id BIGINT,
+    warehouse VARCHAR(128),
+    location VARCHAR(128),
+    quantity NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    qty NUMERIC(15, 2) DEFAULT 0,
+    unit_cost NUMERIC(15, 2) DEFAULT 0,
+    entry_date DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.warehouse_inventory (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
+    warehouse_id BIGINT,
+    warehouse_name VARCHAR(128),
     product_id BIGINT,
-    location_id BIGINT,
-    quantity NUMERIC(15, 2) DEFAULT 0.00,
+    product_name VARCHAR(255),
+    quantity NUMERIC(15, 2) DEFAULT 0,
     updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.stock_balances (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    product_name VARCHAR(255),
+    warehouse_name VARCHAR(128),
+    quantity NUMERIC(15, 2) DEFAULT 0.00,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.stock_transfers (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    transfer_no VARCHAR(64) NOT NULL,
-    source_location_id BIGINT,
-    destination_location_id BIGINT,
+    transfer_number VARCHAR(64),
+    transfer_no VARCHAR(64),
+    from_warehouse_id BIGINT,
+    to_warehouse_id BIGINT,
+    from_location VARCHAR(128),
+    to_location VARCHAR(128),
+    transfer_date DATE DEFAULT CURRENT_DATE,
     items JSONB DEFAULT '[]'::jsonb,
+    status VARCHAR(64) DEFAULT 'Completed',
     notes TEXT,
-    status VARCHAR(32) DEFAULT 'Completed',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 8. SALESMEN
+-- 9. SALESMEN
 CREATE TABLE IF NOT EXISTS public.salesmen (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    user_id UUID,
     name VARCHAR(255) NOT NULL,
+    invoice_name VARCHAR(128),
+    invoice_names TEXT,
+    linked_salesmen JSONB DEFAULT '[]'::jsonb,
     phone VARCHAR(64),
     email VARCHAR(128),
     commission_rate NUMERIC(5, 2) DEFAULT 0.00,
-    area VARCHAR(128),
-    invoice_name VARCHAR(255),
-    invoice_names JSONB DEFAULT '[]'::jsonb,
-    linked_salesmen JSONB DEFAULT '[]'::jsonb,
+    commissionRate NUMERIC(5, 2) DEFAULT 0.00,
+    target_amount NUMERIC(15, 2) DEFAULT 0.00,
+    achieved_amount NUMERIC(15, 2) DEFAULT 0.00,
+    status VARCHAR(32) DEFAULT 'Active',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 9. CRM: LEADS & QUOTATIONS
+-- 10. CRM: LEADS & QUOTATIONS
 CREATE TABLE IF NOT EXISTS public.crm_leads (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
@@ -241,6 +274,7 @@ CREATE TABLE IF NOT EXISTS public.crm_leads (
 CREATE TABLE IF NOT EXISTS public.crm_quotations (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
+    quotation_number VARCHAR(64),
     quote_no VARCHAR(64),
     customer VARCHAR(255),
     customer_name VARCHAR(255),
@@ -251,11 +285,10 @@ CREATE TABLE IF NOT EXISTS public.crm_quotations (
     status VARCHAR(64) DEFAULT 'Draft',
     items JSONB DEFAULT '[]'::jsonb,
     notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 10. SALES: INVOICES, RETURNS, DELIVERY CHALLANS & RECEIPTS
+-- 11. SALES: INVOICES, RETURNS & CHALLANS
 CREATE TABLE IF NOT EXISTS public.sales_invoices (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
@@ -263,113 +296,140 @@ CREATE TABLE IF NOT EXISTS public.sales_invoices (
     customer_id BIGINT,
     customer_name VARCHAR(255) NOT NULL,
     buyer_ntn VARCHAR(32),
-    buyer_cnic VARCHAR(32),
-    buyer_province VARCHAR(64) DEFAULT 'Sindh',
-    buyer_address TEXT,
-    buyer_registration_type VARCHAR(32) DEFAULT 'Unregistered',
-    items JSONB NOT NULL DEFAULT '[]'::jsonb,
+    invoice_date DATE DEFAULT CURRENT_DATE,
+    warehouse VARCHAR(128),
+    dispatch_warehouse VARCHAR(128),
     total_amount NUMERIC(15, 2) DEFAULT 0.00,
-    discount_amt NUMERIC(15, 2) DEFAULT 0.00,
-    sales_tax_amt NUMERIC(15, 2) DEFAULT 0.00,
-    further_tax_amt NUMERIC(15, 2) DEFAULT 0.00,
-    extra_tax_amt NUMERIC(15, 2) DEFAULT 0.00,
-    net_amount NUMERIC(15, 2) DEFAULT 0.00,
-    amount_paid NUMERIC(15, 2) DEFAULT 0.00,
-    balance_due NUMERIC(15, 2) DEFAULT 0.00,
-    sale_status VARCHAR(32) DEFAULT 'Completed',
-    receipt_status VARCHAR(32) DEFAULT 'Paid',
-    fbr_fiscal_number VARCHAR(128),
-    fbr_status VARCHAR(32) DEFAULT 'Pending',
+    cash_amount_paid NUMERIC(15, 2) DEFAULT 0.00,
+    bank_amount NUMERIC(15, 2) DEFAULT 0.00,
+    receipt_status VARCHAR(64) DEFAULT 'Unpaid',
+    sale_status VARCHAR(64) DEFAULT 'Final',
+    items JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.sales_returns (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    return_no VARCHAR(64) NOT NULL,
-    invoice_no VARCHAR(64),
-    customer_id BIGINT,
+    return_no VARCHAR(64),
+    original_invoice_no VARCHAR(64),
     customer_name VARCHAR(255),
+    customer_id BIGINT,
     return_date DATE DEFAULT CURRENT_DATE,
     items JSONB DEFAULT '[]'::jsonb,
     total_amount NUMERIC(15, 2) DEFAULT 0.00,
-    refund_amount NUMERIC(15, 2) DEFAULT 0.00,
-    notes TEXT,
+    payout_amount_paid NUMERIC(15, 2) DEFAULT 0.00,
+    receipt_status VARCHAR(64) DEFAULT 'Pending',
+    status VARCHAR(64) DEFAULT 'Completed',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.sales_return_receipts (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    receipt_no VARCHAR(64) NOT NULL,
+    receipt_number VARCHAR(64),
     return_no VARCHAR(64),
-    customer_id BIGINT,
-    customer_name VARCHAR(255),
-    amount NUMERIC(15, 2) DEFAULT 0.00,
+    invoice_no VARCHAR(64),
+    sales_return_id BIGINT,
+    return_id BIGINT,
+    amount_paid NUMERIC(15, 2) DEFAULT 0.00,
+    refund_amount NUMERIC(15, 2) DEFAULT 0.00,
     payment_mode VARCHAR(64) DEFAULT 'Cash',
+    metadata JSONB DEFAULT '{}'::jsonb,
+    notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.delivery_challans (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    challan_no VARCHAR(64) NOT NULL,
+    challan_number VARCHAR(64),
+    challan_no VARCHAR(64),
+    invoice_id BIGINT,
     invoice_no VARCHAR(64),
+    customer_id BIGINT,
     customer_name VARCHAR(255),
-    dispatch_warehouse VARCHAR(255),
+    dispatch_warehouse VARCHAR(128),
+    driver_name VARCHAR(128),
+    vehicle_no VARCHAR(64),
+    transport_name VARCHAR(128),
+    transportation VARCHAR(128),
+    po_no VARCHAR(64),
+    remarks TEXT,
     items JSONB DEFAULT '[]'::jsonb,
-    status VARCHAR(64) DEFAULT 'Pending',
-    is_printed BOOLEAN DEFAULT FALSE,
-    notes TEXT,
+    total_quantity NUMERIC(15, 2) DEFAULT 0.00,
+    total_amount NUMERIC(15, 2) DEFAULT 0.00,
+    total_discount NUMERIC(15, 2) DEFAULT 0.00,
+    total_net_amount NUMERIC(15, 2) DEFAULT 0.00,
+    delivery_date DATE DEFAULT CURRENT_DATE,
+    status VARCHAR(64) DEFAULT 'Dispatched',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 11. PURCHASES: SUPPLIER PURCHASES, GRN & RETURNS
+-- 12. PURCHASES & GRN
 CREATE TABLE IF NOT EXISTS public.supplier_purchases (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
+    bill_number VARCHAR(64),
     purchase_no VARCHAR(64),
-    po_no VARCHAR(64),
     vendor_id BIGINT,
-    vendor_name VARCHAR(255),
+    supplier_name VARCHAR(255),
+    target_warehouse VARCHAR(128),
     purchase_date DATE DEFAULT CURRENT_DATE,
     items JSONB DEFAULT '[]'::jsonb,
     total_amount NUMERIC(15, 2) DEFAULT 0.00,
     paid_amount NUMERIC(15, 2) DEFAULT 0.00,
-    balance_due NUMERIC(15, 2) DEFAULT 0.00,
+    cash_amount_paid NUMERIC(15, 2) DEFAULT 0.00,
+    bank_amount_paid NUMERIC(15, 2) DEFAULT 0.00,
+    balance_amount NUMERIC(15, 2) DEFAULT 0.00,
+    remaining_balance NUMERIC(15, 2) DEFAULT 0.00,
+    payment_status VARCHAR(64) DEFAULT 'Unpaid',
+    payment_term VARCHAR(64) DEFAULT 'Credit',
+    metadata JSONB DEFAULT '{}'::jsonb,
+    notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.purchase_returns (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    return_no VARCHAR(64) NOT NULL,
-    bill_no VARCHAR(64),
+    return_no VARCHAR(64),
+    return_number VARCHAR(64),
+    purchase_no VARCHAR(64),
     vendor_id BIGINT,
     vendor_name VARCHAR(255),
-    items JSONB DEFAULT '[]'::jsonb,
     total_amount NUMERIC(15, 2) DEFAULT 0.00,
+    amount_paid NUMERIC(15, 2) DEFAULT 0.00,
+    source_warehouse VARCHAR(128),
+    status VARCHAR(64) DEFAULT 'Completed',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.purchase_return_receipts (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    receipt_no VARCHAR(64),
+    receipt_number VARCHAR(64),
     return_no VARCHAR(64),
-    vendor_name VARCHAR(255),
-    amount NUMERIC(15, 2) DEFAULT 0.00,
+    return_id BIGINT,
+    amount_received NUMERIC(15, 2) DEFAULT 0.00,
+    refund_amount NUMERIC(15, 2) DEFAULT 0.00,
+    payment_mode VARCHAR(64) DEFAULT 'Cash',
+    metadata JSONB DEFAULT '{}'::jsonb,
+    notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.grn_receipts (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    grn_no VARCHAR(64) NOT NULL,
+    grn_number VARCHAR(64),
+    purchase_id BIGINT,
     vendor_id BIGINT,
     vendor_name VARCHAR(255),
-    inward_challan_no VARCHAR(64),
+    received_date DATE DEFAULT CURRENT_DATE,
+    warehouse_id BIGINT,
     status VARCHAR(64) DEFAULT 'Received',
+    notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -378,15 +438,17 @@ CREATE TABLE IF NOT EXISTS public.grn_items (
     grn_id BIGINT,
     product_id BIGINT,
     product_name VARCHAR(255),
-    quantity NUMERIC(15, 2) DEFAULT 0.00,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    warehouse_name VARCHAR(128),
+    quantity_received NUMERIC(15, 2) DEFAULT 0.00,
+    accepted_qty NUMERIC(15, 2) DEFAULT 0.00,
+    unit_cost NUMERIC(15, 2) DEFAULT 0.00
 );
 
--- 12. BANKING, CHART OF ACCOUNTS & FINANCIAL VOUCHERS
+-- 13. ACCOUNTS & FINANCIAL VOUCHERS
 CREATE TABLE IF NOT EXISTS public.chart_of_accounts (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    account_code VARCHAR(32) NOT NULL,
+    account_code VARCHAR(64) NOT NULL,
     account_title VARCHAR(255) NOT NULL,
     control_code VARCHAR(64),
     category_code VARCHAR(64),
@@ -395,272 +457,10 @@ CREATE TABLE IF NOT EXISTS public.chart_of_accounts (
     opening_balance NUMERIC(15, 2) DEFAULT 0.00,
     balance_nature VARCHAR(16) DEFAULT 'Debit',
     notes TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS public.banks (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id VARCHAR(64) DEFAULT 'bashir',
-    "bankName" VARCHAR(255) NOT NULL,
-    "accountTitle" VARCHAR(255) NOT NULL,
-    "accountNumber" VARCHAR(64) NOT NULL,
-    branch VARCHAR(128),
-    iban VARCHAR(64),
-    "initialBalance" NUMERIC(15, 2) DEFAULT 0.00,
-    "currentBalance" NUMERIC(15, 2) DEFAULT 0.00,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS public.financial_vouchers (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id VARCHAR(64) DEFAULT 'bashir',
-    voucher_no VARCHAR(64) NOT NULL,
-    voucher_type VARCHAR(32) NOT NULL,
-    voucher_date DATE DEFAULT CURRENT_DATE,
-    account_code VARCHAR(32),
-    account_title VARCHAR(255),
-    debit NUMERIC(15, 2) DEFAULT 0.00,
-    credit NUMERIC(15, 2) DEFAULT 0.00,
-    narration TEXT,
-    salesman_id BIGINT,
-    bank_id BIGINT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 13. AUDIT LOGS
-CREATE TABLE IF NOT EXISTS public.audit_logs (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id VARCHAR(64) DEFAULT 'bashir',
-    action_type VARCHAR(64),
-    table_name VARCHAR(64),
-    performed_by VARCHAR(128),
-    details JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 14. HUMAN RESOURCES (HR)
-CREATE TABLE IF NOT EXISTS public.hr_employees (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id VARCHAR(64) DEFAULT 'bashir',
-    name VARCHAR(255) NOT NULL,
-    designation VARCHAR(128),
-    phone VARCHAR(64),
-    email VARCHAR(128),
-    basic_salary NUMERIC(15, 2) DEFAULT 0.00,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS public.hr_attendance (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id VARCHAR(64) DEFAULT 'bashir',
-    employee_id BIGINT,
-    attendance_date DATE DEFAULT CURRENT_DATE,
-    status VARCHAR(32) DEFAULT 'Present',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS public.hr_pay_heads (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id VARCHAR(64) DEFAULT 'bashir',
-    name VARCHAR(128) NOT NULL,
-    type VARCHAR(64) DEFAULT 'Earnings',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 15. PERMISSIONS & DATA API GRANTS
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
-
--- 16. PERMISSIVE RLS POLICIES FOR ALL TABLES
-DO $$
-DECLARE
-    r RECORD;
-BEGIN
-    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-        EXECUTE 'ALTER TABLE public.' || quote_ident(r.tablename) || ' ENABLE ROW LEVEL SECURITY;';
-        EXECUTE 'DROP POLICY IF EXISTS allow_all_' || quote_ident(r.tablename) || ' ON public.' || quote_ident(r.tablename) || ';';
-        EXECUTE 'CREATE POLICY allow_all_' || quote_ident(r.tablename) || ' ON public.' || quote_ident(r.tablename) || ' FOR ALL TO public USING (true) WITH CHECK (true);';
-    END LOOP;
-END $$;
-
--- 17. INITIAL STARTER SEED DATA
-INSERT INTO public.tenants (slug, name, email)
-VALUES
-    ('bashir', 'NHT ENTERPRISE - Master', 'admin@nhtenterprise.com'),
-    ('demo', 'Xenith ERP Demo', 'demo@xenitherp.com')
-ON CONFLICT (slug) DO NOTHING;
-
-INSERT INTO public.companies (name, address, phone)
-VALUES
-    ('NHT ENTERPRISE (Main Showroom)', 'Plot 12-A, Commercial Area, Hyderabad', '0300-1234567'),
-    ('Al-Madina Traders', 'Shop # 4, Ceramic Market, Saddar', '0312-7654321')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.inventory_locations (name, address, description)
-VALUES
-    ('Main Warehouse (Site A)', 'Industrial Zone, Hyderabad', 'Primary central inventory warehouse'),
-    ('City Center Showroom', 'Commercial Market, Saddar', 'Retail and display stock')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.inventory_uom (short_code, full_name, category)
-VALUES
-    ('SQFT', 'Square Feet', 'Area & Surface'),
-    ('SQM', 'Square Meter', 'Area & Surface'),
-    ('BOX', 'Carton / Box', 'Packaging'),
-    ('EACH', 'Each / Single Unit', 'Count & Units'),
-    ('PCS', 'Pieces', 'Count & Units'),
-    ('MTR', 'Meter', 'Length & Distance'),
-    ('KG', 'Kilogram', 'Weight & Mass')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.inventory_categories (name, description)
-VALUES
-    ('Wall Tiles', 'Glazed ceramic and porcelain wall tiles'),
-    ('Floor Tiles', 'Vitrified polished and matte floor tiles'),
-    ('Porcelain Tiles', 'Heavy duty outdoor and indoor porcelain'),
-    ('Sanitary Ware', 'Commode, wash basins, vanities and bidets'),
-    ('Bath Fittings', 'Mixers, taps, showers, and accessories')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.inventory_surface_finishes (name, description)
-VALUES
-    ('Master Tiles', 'Master ceramic & porcelain tiles'),
-    ('Karam Ceramics', 'Premium floor and wall collection'),
-    ('Sonex', 'Sanitary fixtures and fittings'),
-    ('Porta', 'Luxury sanitary ware'),
-    ('RAK Ceramics', 'Imported luxury tiles')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.customers ("customerName", customer_code, "primaryPhone", city, province, company, "currentBalance")
-VALUES
-    ('Al-Razi Construction Co.', '1020-001', '0300-8889991', 'Hyderabad', 'Sindh', 'NHT ENTERPRISE (Main Showroom)', 45000.00),
-    ('Haji Muhammad Ismail & Sons', '1020-002', '0312-3334445', 'Karachi', 'Sindh', 'Al-Madina Traders', 125000.00),
-    ('Malik Builders & Developers', '1020-003', '0333-5556667', 'Sukkur', 'Sindh', 'NHT ENTERPRISE (Main Showroom)', 0.00)
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.products (product_name, category, brand, uom, purchase_price, retail_price, current_stock, min_stock_alert)
-VALUES
-    ('Super White Glossy 60x120', 'Floor Tiles', 'Master Tiles', 'SQFT', 180.00, 240.00, 1500.00, 100.00),
-    ('Calacatta Gold Marble Finish 60x60', 'Floor Tiles', 'Karam Ceramics', 'SQFT', 160.00, 210.00, 2200.00, 150.00),
-    ('Matte Grey Subway Tile 30x60', 'Wall Tiles', 'Master Tiles', 'SQFT', 140.00, 185.00, 850.00, 50.00),
-    ('One-Piece Smart Commode Ivory', 'Sanitary Ware', 'Porta', 'EACH', 18500.00, 24000.00, 25.00, 5.00),
-    ('Single Lever Basin Mixer Chrome', 'Bath Fittings', 'Sonex', 'EACH', 4200.00, 5800.00, 60.00, 10.00)
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.crm_leads (client, contact, phone, interest, est_value, stage, notes)
-VALUES
-    ('Apex Construction - Gulberg Tower', 'Engr. Tariq', '0300-1122334', 'Porcelain Floor Tiles 60x120 (3,500 sqft)', 840000.00, 'Quotation Sent', 'Quotation submitted with 5% discount option'),
-    ('Hassan Residency Bathroom Renovation', 'Mr. Hassan', '0313-9988776', 'Sanitary Ware & Bath Fittings', 165000.00, 'New Inquiry', 'Wants modern wall-hung commodes and chrome mixers')
-ON CONFLICT DO NOTHING;
--- ====================================================================
--- XENITH ERP - MASTER SCHEMA HARMONIZATION & COLUMN ALIGNMENT PATCH
--- Target Database: https://syhxwmnplpkahdzuhvke.supabase.co
--- Resolves ALL schema cache mismatches across all ERP modules
--- ====================================================================
-
--- 1. CUSTOMERS
-ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS "registrationType" VARCHAR(64) DEFAULT 'Retail / General';
-ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS "secondaryPhone" VARCHAR(64);
-UPDATE public.customers SET "registrationType" = registrationtype WHERE "registrationType" IS NULL;
-UPDATE public.customers SET "secondaryPhone" = secondaryphone WHERE "secondaryPhone" IS NULL;
-
--- 2. VENDORS / SUPPLIERS
-ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS name VARCHAR(255);
-ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS "vendorCode" VARCHAR(64);
-ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS "pageNo" VARCHAR(64);
-ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS contact_name VARCHAR(128);
-ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS cell_no VARCHAR(64);
-ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS phone_no VARCHAR(64);
-UPDATE public.vendors SET name = vendor_name WHERE name IS NULL;
-UPDATE public.vendors SET "vendorCode" = vendor_code WHERE "vendorCode" IS NULL;
-UPDATE public.vendors SET "pageNo" = page_no WHERE "pageNo" IS NULL;
-
--- 3. PRODUCTS
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS sales_price NUMERIC(15, 2) DEFAULT 0.00;
-UPDATE public.products SET sales_price = retail_price WHERE sales_price IS NULL OR sales_price = 0;
-
--- 4. SALES INVOICES
-ALTER TABLE public.sales_invoices ADD COLUMN IF NOT EXISTS cash_amount_paid NUMERIC(15, 2) DEFAULT 0.00;
-ALTER TABLE public.sales_invoices ADD COLUMN IF NOT EXISTS bank_amount NUMERIC(15, 2) DEFAULT 0.00;
-ALTER TABLE public.sales_invoices ADD COLUMN IF NOT EXISTS dispatch_warehouse VARCHAR(128);
-ALTER TABLE public.sales_invoices ADD COLUMN IF NOT EXISTS sale_status VARCHAR(64) DEFAULT 'Final';
-
--- 5. SALES RETURNS & RECEIPTS
-ALTER TABLE public.sales_returns ADD COLUMN IF NOT EXISTS original_invoice_no VARCHAR(64);
-ALTER TABLE public.sales_returns ADD COLUMN IF NOT EXISTS return_no VARCHAR(64);
-ALTER TABLE public.sales_returns ADD COLUMN IF NOT EXISTS status VARCHAR(64) DEFAULT 'Completed';
-ALTER TABLE public.sales_returns ADD COLUMN IF NOT EXISTS payout_amount_paid NUMERIC(15, 2) DEFAULT 0.00;
-
-ALTER TABLE public.sales_return_receipts ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(15, 2) DEFAULT 0.00;
-ALTER TABLE public.sales_return_receipts ADD COLUMN IF NOT EXISTS sales_return_id BIGINT;
-ALTER TABLE public.sales_return_receipts ADD COLUMN IF NOT EXISTS invoice_no VARCHAR(64);
-ALTER TABLE public.sales_return_receipts ADD COLUMN IF NOT EXISTS return_no VARCHAR(64);
-ALTER TABLE public.sales_return_receipts ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
-
--- 6. DELIVERY CHALLANS
-ALTER TABLE public.delivery_challans ADD COLUMN IF NOT EXISTS challan_no VARCHAR(64);
-ALTER TABLE public.delivery_challans ADD COLUMN IF NOT EXISTS dispatch_warehouse VARCHAR(128);
-UPDATE public.delivery_challans SET challan_no = challan_number WHERE challan_no IS NULL;
-
--- 7. SUPPLIER PURCHASES
-ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS purchase_no VARCHAR(64);
-ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS supplier_name VARCHAR(255);
-ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS target_warehouse VARCHAR(128);
-ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS cash_amount_paid NUMERIC(15, 2) DEFAULT 0.00;
-ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS bank_amount_paid NUMERIC(15, 2) DEFAULT 0.00;
-ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
-UPDATE public.supplier_purchases SET purchase_no = bill_number WHERE purchase_no IS NULL;
-
--- 8. PURCHASE RETURNS & RECEIPTS
-ALTER TABLE public.purchase_returns ADD COLUMN IF NOT EXISTS purchase_no VARCHAR(64);
-ALTER TABLE public.purchase_returns ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(15, 2) DEFAULT 0.00;
-ALTER TABLE public.purchase_returns ADD COLUMN IF NOT EXISTS source_warehouse VARCHAR(128);
-ALTER TABLE public.purchase_returns ADD COLUMN IF NOT EXISTS status VARCHAR(64) DEFAULT 'Completed';
-
-ALTER TABLE public.purchase_return_receipts ADD COLUMN IF NOT EXISTS return_no VARCHAR(64);
-ALTER TABLE public.purchase_return_receipts ADD COLUMN IF NOT EXISTS amount_received NUMERIC(15, 2) DEFAULT 0.00;
-ALTER TABLE public.purchase_return_receipts ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
-
--- 9. GRN (GOODS RECEIVED NOTE)
-ALTER TABLE public.grn_receipts ADD COLUMN IF NOT EXISTS status VARCHAR(64) DEFAULT 'Received';
-
-ALTER TABLE public.grn_items ADD COLUMN IF NOT EXISTS product_name VARCHAR(255);
-ALTER TABLE public.grn_items ADD COLUMN IF NOT EXISTS warehouse_name VARCHAR(128);
-
--- 10. STOCK & INVENTORY
-ALTER TABLE public.opening_stocks ADD COLUMN IF NOT EXISTS "itemName" VARCHAR(255);
-ALTER TABLE public.opening_stocks ADD COLUMN IF NOT EXISTS product_name VARCHAR(255);
-ALTER TABLE public.opening_stocks ADD COLUMN IF NOT EXISTS qty NUMERIC(15, 2) DEFAULT 0.00;
-ALTER TABLE public.opening_stocks ADD COLUMN IF NOT EXISTS location VARCHAR(128);
-
-ALTER TABLE public.warehouse_inventory ADD COLUMN IF NOT EXISTS warehouse_name VARCHAR(128);
-
-ALTER TABLE public.stock_transfers ADD COLUMN IF NOT EXISTS transfer_no VARCHAR(64);
-ALTER TABLE public.stock_transfers ADD COLUMN IF NOT EXISTS from_location VARCHAR(128);
-ALTER TABLE public.stock_transfers ADD COLUMN IF NOT EXISTS to_location VARCHAR(128);
-UPDATE public.stock_transfers SET transfer_no = transfer_number WHERE transfer_no IS NULL;
-
--- 11. SALESMEN & HR
-ALTER TABLE public.salesmen ADD COLUMN IF NOT EXISTS invoice_name VARCHAR(128);
-ALTER TABLE public.salesmen ADD COLUMN IF NOT EXISTS invoice_names TEXT;
-ALTER TABLE public.salesmen ADD COLUMN IF NOT EXISTS linked_salesmen JSONB DEFAULT '[]'::jsonb;
-
-ALTER TABLE public.hr_employees ADD COLUMN IF NOT EXISTS designation_name VARCHAR(128);
-
--- 12. FINANCIAL VOUCHERS
-ALTER TABLE public.financial_vouchers ADD COLUMN IF NOT EXISTS total_amount NUMERIC(15, 2) DEFAULT 0.00;
-ALTER TABLE public.financial_vouchers ADD COLUMN IF NOT EXISTS original_invoice_no VARCHAR(64);
-ALTER TABLE public.financial_vouchers ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb;
-ALTER TABLE public.financial_vouchers ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
-
--- 13. INVENTORY LOCATIONS
-ALTER TABLE public.inventory_locations ADD COLUMN IF NOT EXISTS location_type VARCHAR(64) DEFAULT 'Warehouse';
-
--- 14. NEW TABLES FOR COA, HR & LOGISTICS
 CREATE TABLE IF NOT EXISTS public.coa_categories (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(128) NOT NULL,
@@ -682,10 +482,74 @@ CREATE TABLE IF NOT EXISTS public.coa_controls (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.banks (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    bank_name VARCHAR(128) NOT NULL,
+    "bankName" VARCHAR(128),
+    account_title VARCHAR(128) NOT NULL,
+    "accountTitle" VARCHAR(128),
+    account_number VARCHAR(64) NOT NULL,
+    "accountNumber" VARCHAR(64),
+    branch_name VARCHAR(128),
+    current_balance NUMERIC(15, 2) DEFAULT 0.00,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.financial_vouchers (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    voucher_no VARCHAR(64) NOT NULL,
+    voucher_type VARCHAR(64) NOT NULL,
+    voucher_date DATE DEFAULT CURRENT_DATE,
+    account_code VARCHAR(64),
+    account_title VARCHAR(255),
+    debit NUMERIC(15, 2) DEFAULT 0.00,
+    credit NUMERIC(15, 2) DEFAULT 0.00,
+    total_amount NUMERIC(15, 2) DEFAULT 0.00,
+    original_invoice_no VARCHAR(64),
+    items JSONB DEFAULT '[]'::jsonb,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    narration TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 14. HR & MISCELLANEOUS
+CREATE TABLE IF NOT EXISTS public.hr_employees (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    name VARCHAR(255) NOT NULL,
+    designation VARCHAR(128),
+    designation_name VARCHAR(128),
+    department VARCHAR(128),
+    phone VARCHAR(64),
+    email VARCHAR(128),
+    basic_salary NUMERIC(15, 2) DEFAULT 0.00,
+    status VARCHAR(32) DEFAULT 'Active',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS public.hr_designations (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(128) NOT NULL,
+    title VARCHAR(128),
     description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.hr_attendance (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    employee_id BIGINT,
+    date DATE DEFAULT CURRENT_DATE,
+    status VARCHAR(32) DEFAULT 'Present'
+);
+
+CREATE TABLE IF NOT EXISTS public.hr_pay_heads (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    name VARCHAR(128) NOT NULL,
+    type VARCHAR(64) DEFAULT 'Earnings',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -694,13 +558,226 @@ CREATE TABLE IF NOT EXISTS public.logistics_transportation (
     name VARCHAR(128) NOT NULL,
     driver_name VARCHAR(128),
     vehicle_number VARCHAR(64),
-    phone VARCHAR(64),
     base_charges NUMERIC(15, 2) DEFAULT 0.00,
     status VARCHAR(32) DEFAULT 'Active',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Seed Essential COA Categories & Controls
+CREATE TABLE IF NOT EXISTS public.notifications (
+    id BIGSERIAL PRIMARY KEY,
+    user_id VARCHAR(64),
+    title VARCHAR(255),
+    message TEXT,
+    is_read BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    user_email VARCHAR(128),
+    action VARCHAR(64),
+    module VARCHAR(64),
+    details JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ====================================================================
+-- 15. RETROACTIVE SCHEMA HARMONIZATION (Ensures existing tables have all columns)
+-- ====================================================================
+
+-- Customers
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS "currentBalance" NUMERIC(15, 2) DEFAULT 0.00;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS opening_balance NUMERIC(15, 2) DEFAULT 0.00;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS "registrationType" VARCHAR(64) DEFAULT 'Retail / General';
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS registrationtype VARCHAR(64) DEFAULT 'Retail / General';
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS "secondaryPhone" VARCHAR(64);
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS secondaryphone VARCHAR(64);
+UPDATE public.customers SET "currentBalance" = balance WHERE "currentBalance" IS NULL OR "currentBalance" = 0;
+UPDATE public.customers SET "registrationType" = registrationtype WHERE "registrationType" IS NULL;
+
+-- Vendors
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS "vendorCode" VARCHAR(64);
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS "pageNo" VARCHAR(64);
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS contact_name VARCHAR(128);
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS cell_no VARCHAR(64);
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS phone_no VARCHAR(64);
+UPDATE public.vendors SET name = vendor_name WHERE name IS NULL;
+
+-- Products
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS sales_price NUMERIC(15, 2) DEFAULT 0.00;
+UPDATE public.products SET sales_price = retail_price WHERE sales_price IS NULL OR sales_price = 0;
+
+-- Sales Invoices
+ALTER TABLE public.sales_invoices ADD COLUMN IF NOT EXISTS cash_amount_paid NUMERIC(15, 2) DEFAULT 0.00;
+ALTER TABLE public.sales_invoices ADD COLUMN IF NOT EXISTS bank_amount NUMERIC(15, 2) DEFAULT 0.00;
+ALTER TABLE public.sales_invoices ADD COLUMN IF NOT EXISTS dispatch_warehouse VARCHAR(128);
+ALTER TABLE public.sales_invoices ADD COLUMN IF NOT EXISTS sale_status VARCHAR(64) DEFAULT 'Final';
+
+-- Delivery Challans
+ALTER TABLE public.delivery_challans ADD COLUMN IF NOT EXISTS challan_no VARCHAR(64);
+ALTER TABLE public.delivery_challans ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255);
+ALTER TABLE public.delivery_challans ADD COLUMN IF NOT EXISTS dispatch_warehouse VARCHAR(128);
+ALTER TABLE public.delivery_challans ADD COLUMN IF NOT EXISTS transport_name VARCHAR(128);
+ALTER TABLE public.delivery_challans ADD COLUMN IF NOT EXISTS transportation VARCHAR(128);
+ALTER TABLE public.delivery_challans ADD COLUMN IF NOT EXISTS po_no VARCHAR(64);
+ALTER TABLE public.delivery_challans ADD COLUMN IF NOT EXISTS remarks TEXT;
+ALTER TABLE public.delivery_challans ADD COLUMN IF NOT EXISTS total_quantity NUMERIC(15, 2) DEFAULT 0.00;
+ALTER TABLE public.delivery_challans ADD COLUMN IF NOT EXISTS total_discount NUMERIC(15, 2) DEFAULT 0.00;
+ALTER TABLE public.delivery_challans ADD COLUMN IF NOT EXISTS total_net_amount NUMERIC(15, 2) DEFAULT 0.00;
+
+-- CRM
+ALTER TABLE public.crm_leads ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.crm_quotations ADD COLUMN IF NOT EXISTS quote_no VARCHAR(64);
+
+-- GRN & Purchases
+ALTER TABLE public.grn_receipts ADD COLUMN IF NOT EXISTS vendor_name VARCHAR(255);
+ALTER TABLE public.grn_receipts ADD COLUMN IF NOT EXISTS status VARCHAR(64) DEFAULT 'Received';
+ALTER TABLE public.grn_items ADD COLUMN IF NOT EXISTS accepted_qty NUMERIC(15, 2) DEFAULT 0.00;
+ALTER TABLE public.grn_items ADD COLUMN IF NOT EXISTS product_name VARCHAR(255);
+ALTER TABLE public.grn_items ADD COLUMN IF NOT EXISTS warehouse_name VARCHAR(128);
+
+ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS purchase_no VARCHAR(64);
+ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS supplier_name VARCHAR(255);
+ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS target_warehouse VARCHAR(128);
+ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS cash_amount_paid NUMERIC(15, 2) DEFAULT 0.00;
+ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS bank_amount_paid NUMERIC(15, 2) DEFAULT 0.00;
+ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS remaining_balance NUMERIC(15, 2) DEFAULT 0.00;
+ALTER TABLE public.supplier_purchases ADD COLUMN IF NOT EXISTS payment_term VARCHAR(64) DEFAULT 'Credit';
+
+-- Inventory Locations & Transfers
+ALTER TABLE public.inventory_locations ADD COLUMN IF NOT EXISTS location_type VARCHAR(64) DEFAULT 'Warehouse';
+ALTER TABLE public.stock_transfers ADD COLUMN IF NOT EXISTS transfer_no VARCHAR(64);
+ALTER TABLE public.stock_transfers ADD COLUMN IF NOT EXISTS from_location VARCHAR(128);
+ALTER TABLE public.stock_transfers ADD COLUMN IF NOT EXISTS to_location VARCHAR(128);
+
+-- HR & Banks
+ALTER TABLE public.hr_designations ADD COLUMN IF NOT EXISTS title VARCHAR(128);
+UPDATE public.hr_designations SET title = name WHERE title IS NULL;
+ALTER TABLE public.hr_employees ADD COLUMN IF NOT EXISTS designation_name VARCHAR(128);
+ALTER TABLE public.banks ADD COLUMN IF NOT EXISTS "bankName" VARCHAR(128);
+ALTER TABLE public.banks ADD COLUMN IF NOT EXISTS "accountTitle" VARCHAR(128);
+ALTER TABLE public.banks ADD COLUMN IF NOT EXISTS "accountNumber" VARCHAR(64);
+
+-- Drop any restrictive NOT NULL on tenant_id across all tables
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (
+        SELECT table_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' AND column_name = 'tenant_id'
+    ) LOOP
+        EXECUTE 'ALTER TABLE public.' || quote_ident(r.table_name) || ' ALTER COLUMN tenant_id DROP NOT NULL;';
+        EXECUTE 'ALTER TABLE public.' || quote_ident(r.table_name) || ' ALTER COLUMN tenant_id SET DEFAULT ''bashir'';';
+        EXECUTE 'UPDATE public.' || quote_ident(r.table_name) || ' SET tenant_id = ''bashir'' WHERE tenant_id IS NULL;';
+    END LOOP;
+END $$;
+
+-- Drop strict constraint on purchase_returns.return_no if present
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'purchase_returns' AND column_name = 'return_no' AND is_nullable = 'NO'
+    ) THEN
+        ALTER TABLE public.purchase_returns ALTER COLUMN return_no DROP NOT NULL;
+    END IF;
+END $$;
+
+-- 16. PERMISSIONS & DATA API GRANTS
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+
+-- Permissive RLS Policies
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+        EXECUTE 'ALTER TABLE public.' || quote_ident(r.tablename) || ' ENABLE ROW LEVEL SECURITY;';
+        EXECUTE 'DROP POLICY IF EXISTS allow_all_' || quote_ident(r.tablename) || ' ON public.' || quote_ident(r.tablename) || ';';
+        EXECUTE 'CREATE POLICY allow_all_' || quote_ident(r.tablename) || ' ON public.' || quote_ident(r.tablename) || ' FOR ALL TO public USING (true) WITH CHECK (true);';
+    END LOOP;
+END $$;
+
+-- ====================================================================
+-- 17. INITIAL STARTER SEED DATA (Now runs after ALL columns are guaranteed to exist)
+-- ====================================================================
+
+INSERT INTO public.tenants (slug, name, email)
+VALUES
+    ('bashir', 'NHT ENTERPRISE - Master', 'admin@nhtenterprise.com'),
+    ('demo', 'Xenith ERP Demo', 'demo@xenitherp.com')
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.companies (tenant_id, name, address, phone)
+VALUES
+    ('bashir', 'NHT ENTERPRISE (Main Showroom)', 'Plot 12-A, Commercial Area, Hyderabad', '0300-1234567'),
+    ('bashir', 'Al-Madina Traders', 'Shop # 4, Ceramic Market, Saddar', '0312-7654321')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.inventory_locations (tenant_id, name, address, description)
+VALUES
+    ('bashir', 'Main Warehouse (Site A)', 'Industrial Zone, Hyderabad', 'Primary central inventory warehouse'),
+    ('bashir', 'City Center Showroom', 'Commercial Market, Saddar', 'Retail and display stock')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.inventory_uom (tenant_id, short_code, full_name, category)
+VALUES
+    ('bashir', 'SQFT', 'Square Feet', 'Area & Surface'),
+    ('bashir', 'SQM', 'Square Meter', 'Area & Surface'),
+    ('bashir', 'BOX', 'Carton / Box', 'Packaging'),
+    ('bashir', 'EACH', 'Each / Single Unit', 'Count & Units'),
+    ('bashir', 'PCS', 'Pieces', 'Count & Units'),
+    ('bashir', 'MTR', 'Meter', 'Length & Distance'),
+    ('bashir', 'KG', 'Kilogram', 'Weight & Mass')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.inventory_categories (tenant_id, name, description)
+VALUES
+    ('bashir', 'Wall Tiles', 'Glazed ceramic and porcelain wall tiles'),
+    ('bashir', 'Floor Tiles', 'Vitrified polished and matte floor tiles'),
+    ('bashir', 'Porcelain Tiles', 'Heavy duty outdoor and indoor porcelain'),
+    ('bashir', 'Sanitary Ware', 'Commode, wash basins, vanities and bidets'),
+    ('bashir', 'Bath Fittings', 'Mixers, taps, showers, and accessories')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.inventory_surface_finishes (tenant_id, name, description)
+VALUES
+    ('bashir', 'Master Tiles', 'Master ceramic & porcelain tiles'),
+    ('bashir', 'Karam Ceramics', 'Premium floor and wall collection'),
+    ('bashir', 'Sonex', 'Sanitary fixtures and fittings'),
+    ('bashir', 'Porta', 'Luxury sanitary ware'),
+    ('bashir', 'RAK Ceramics', 'Imported luxury tiles')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.customers (tenant_id, "customerName", customer_code, "primaryPhone", city, province, company, "currentBalance", balance)
+VALUES
+    ('bashir', 'Al-Razi Construction Co.', '1020-001', '0300-8889991', 'Hyderabad', 'Sindh', 'NHT ENTERPRISE (Main Showroom)', 45000.00, 45000.00),
+    ('bashir', 'Haji Muhammad Ismail & Sons', '1020-002', '0312-3334445', 'Karachi', 'Sindh', 'Al-Madina Traders', 125000.00, 125000.00),
+    ('bashir', 'Malik Builders & Developers', '1020-003', '0333-5556667', 'Sukkur', 'Sindh', 'NHT ENTERPRISE (Main Showroom)', 0.00, 0.00)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.products (tenant_id, product_name, category, brand, uom, purchase_price, retail_price, sales_price, current_stock, min_stock_alert)
+VALUES
+    ('bashir', 'Super White Glossy 60x120', 'Floor Tiles', 'Master Tiles', 'SQFT', 180.00, 240.00, 240.00, 1500.00, 100.00),
+    ('bashir', 'Calacatta Gold Marble Finish 60x60', 'Floor Tiles', 'Karam Ceramics', 'SQFT', 160.00, 210.00, 210.00, 2200.00, 150.00),
+    ('bashir', 'Matte Grey Subway Tile 30x60', 'Wall Tiles', 'Master Tiles', 'SQFT', 140.00, 185.00, 185.00, 850.00, 50.00),
+    ('bashir', 'One-Piece Smart Commode Ivory', 'Sanitary Ware', 'Porta', 'EACH', 18500.00, 24000.00, 24000.00, 25.00, 5.00),
+    ('bashir', 'Single Lever Basin Mixer Chrome', 'Bath Fittings', 'Sonex', 'EACH', 4200.00, 5800.00, 5800.00, 60.00, 10.00)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.crm_leads (tenant_id, client, contact, phone, interest, est_value, stage, notes)
+VALUES
+    ('bashir', 'Apex Construction - Gulberg Tower', 'Engr. Tariq', '0300-1122334', 'Porcelain Floor Tiles 60x120 (3,500 sqft)', 840000.00, 'Quotation Sent', 'Quotation submitted with 5% discount option'),
+    ('bashir', 'Hassan Residency Bathroom Renovation', 'Mr. Hassan', '0313-9988776', 'Sanitary Ware & Bath Fittings', 165000.00, 'New Inquiry', 'Wants modern wall-hung commodes and chrome mixers')
+ON CONFLICT DO NOTHING;
+
 INSERT INTO public.coa_categories (name)
 VALUES ('1. ASSETS'), ('2. LIABILITIES'), ('3. EQUITY / CAPITAL'), ('4. REVENUE'), ('5. EXPENSES')
 ON CONFLICT DO NOTHING;
@@ -722,28 +799,17 @@ VALUES
     ('2. LIABILITIES', 'Current Liabilities', 'Suppliers / Vendors')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO public.hr_designations (name, description)
-VALUES ('Showroom Manager', 'Manager in charge of retail showroom'), ('Sales Executive', 'Direct sales and customer relations'), ('Accountant', 'Accounts & ledger management'), ('Warehouse Officer', 'Inventory and dispatches')
+INSERT INTO public.hr_designations (name, title, description)
+VALUES 
+    ('Showroom Manager', 'Showroom Manager', 'Manager in charge of retail showroom'),
+    ('Sales Executive', 'Sales Executive', 'Direct sales and customer relations'),
+    ('Accountant', 'Accountant', 'Accounts & ledger management'),
+    ('Warehouse Officer', 'Warehouse Officer', 'Inventory and dispatches')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.logistics_transportation (name, base_charges, status)
-VALUES ('Faisal Movers Cargo', 2500.00, 'Active'), ('Daewoo Express Cargo', 3500.00, 'Active'), ('Local Truck Carriage (Hyderabad/Karachi)', 12000.00, 'Active')
+VALUES 
+    ('Faisal Movers Cargo', 2500.00, 'Active'),
+    ('Daewoo Express Cargo', 3500.00, 'Active'),
+    ('Local Truck Carriage (Hyderabad/Karachi)', 12000.00, 'Active')
 ON CONFLICT DO NOTHING;
-
--- 15. RE-APPLY DATA API PERMISSIONS AND RLS FOR ALL PUBLIC TABLES
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
-
-DO $$
-DECLARE
-    r RECORD;
-BEGIN
-    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-        EXECUTE 'ALTER TABLE public.' || quote_ident(r.tablename) || ' ENABLE ROW LEVEL SECURITY;';
-        EXECUTE 'DROP POLICY IF EXISTS allow_all_' || quote_ident(r.tablename) || ' ON public.' || quote_ident(r.tablename) || ';';
-        EXECUTE 'CREATE POLICY allow_all_' || quote_ident(r.tablename) || ' ON public.' || quote_ident(r.tablename) || ' FOR ALL TO public USING (true) WITH CHECK (true);';
-    END LOOP;
-END $$;
-
