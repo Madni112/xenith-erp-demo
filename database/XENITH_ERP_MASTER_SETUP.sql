@@ -67,6 +67,19 @@ CREATE TABLE IF NOT EXISTS public.customers (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.customer_recoveries (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    customer_id BIGINT,
+    customer_name VARCHAR(255),
+    amount NUMERIC(15, 2) DEFAULT 0.00,
+    recovery_date DATE DEFAULT CURRENT_DATE,
+    bank_id BIGINT,
+    receipt_no VARCHAR(64),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 5. VENDORS / SUPPLIERS
 CREATE TABLE IF NOT EXISTS public.vendors (
     id BIGSERIAL PRIMARY KEY,
@@ -87,7 +100,7 @@ CREATE TABLE IF NOT EXISTS public.vendors (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. INVENTORY CATEGORIES
+-- 6. INVENTORY: CATEGORIES, BRANDS, FINISHES, LOCATIONS & UOM
 CREATE TABLE IF NOT EXISTS public.inventory_categories (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
@@ -97,7 +110,14 @@ CREATE TABLE IF NOT EXISTS public.inventory_categories (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 7. SURFACE FINISHES / BRANDS
+CREATE TABLE IF NOT EXISTS public.inventory_brands (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS public.inventory_surface_finishes (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
@@ -106,7 +126,15 @@ CREATE TABLE IF NOT EXISTS public.inventory_surface_finishes (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 8. INVENTORY UOM
+CREATE TABLE IF NOT EXISTS public.inventory_locations (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    name VARCHAR(255) NOT NULL,
+    address TEXT,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS public.inventory_uom (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
@@ -117,7 +145,7 @@ CREATE TABLE IF NOT EXISTS public.inventory_uom (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 9. PRODUCTS
+-- 7. PRODUCTS & STOCK
 CREATE TABLE IF NOT EXISTS public.products (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
@@ -147,55 +175,87 @@ CREATE TABLE IF NOT EXISTS public.products (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 10. CHART OF ACCOUNTS
-CREATE TABLE IF NOT EXISTS public.chart_of_accounts (
+CREATE TABLE IF NOT EXISTS public.opening_stocks (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    account_code VARCHAR(32) NOT NULL,
-    account_title VARCHAR(255) NOT NULL,
-    control_code VARCHAR(64),
-    category_code VARCHAR(64),
-    sub_category_code VARCHAR(64),
-    account_type VARCHAR(64),
-    opening_balance NUMERIC(15, 2) DEFAULT 0.00,
-    balance_nature VARCHAR(16) DEFAULT 'Debit',
+    product_id BIGINT,
+    location_id BIGINT,
+    quantity NUMERIC(15, 2) DEFAULT 0.00,
+    cost_price NUMERIC(15, 2) DEFAULT 0.00,
+    retail_price NUMERIC(15, 2) DEFAULT 0.00,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.warehouse_inventory (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    product_id BIGINT,
+    location_id BIGINT,
+    quantity NUMERIC(15, 2) DEFAULT 0.00,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.stock_transfers (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    transfer_no VARCHAR(64) NOT NULL,
+    source_location_id BIGINT,
+    destination_location_id BIGINT,
+    items JSONB DEFAULT '[]'::jsonb,
     notes TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
+    status VARCHAR(32) DEFAULT 'Completed',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 11. BANKS & TREASURY
-CREATE TABLE IF NOT EXISTS public.banks (
+-- 8. SALESMEN
+CREATE TABLE IF NOT EXISTS public.salesmen (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    "bankName" VARCHAR(255) NOT NULL,
-    "accountTitle" VARCHAR(255) NOT NULL,
-    "accountNumber" VARCHAR(64) NOT NULL,
-    branch VARCHAR(128),
-    iban VARCHAR(64),
-    "initialBalance" NUMERIC(15, 2) DEFAULT 0.00,
-    "currentBalance" NUMERIC(15, 2) DEFAULT 0.00,
+    user_id UUID,
+    name VARCHAR(255) NOT NULL,
+    phone VARCHAR(64),
+    email VARCHAR(128),
+    commission_rate NUMERIC(5, 2) DEFAULT 0.00,
+    area VARCHAR(128),
+    invoice_name VARCHAR(255),
+    invoice_names JSONB DEFAULT '[]'::jsonb,
+    linked_salesmen JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 12. FINANCIAL VOUCHERS
-CREATE TABLE IF NOT EXISTS public.financial_vouchers (
+-- 9. CRM: LEADS & QUOTATIONS
+CREATE TABLE IF NOT EXISTS public.crm_leads (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    voucher_no VARCHAR(64) NOT NULL,
-    voucher_type VARCHAR(32) NOT NULL,
-    voucher_date DATE DEFAULT CURRENT_DATE,
-    account_code VARCHAR(32),
-    account_title VARCHAR(255),
-    debit NUMERIC(15, 2) DEFAULT 0.00,
-    credit NUMERIC(15, 2) DEFAULT 0.00,
-    narration TEXT,
-    salesman_id BIGINT,
-    bank_id BIGINT,
+    client VARCHAR(255),
+    contact VARCHAR(255),
+    phone VARCHAR(64),
+    items JSONB DEFAULT '[]'::jsonb,
+    interest TEXT,
+    est_value NUMERIC(15, 2) DEFAULT 0.00,
+    stage VARCHAR(64) DEFAULT 'New Inquiry',
+    notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 13. SALES INVOICES
+CREATE TABLE IF NOT EXISTS public.crm_quotations (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    quote_no VARCHAR(64),
+    customer VARCHAR(255),
+    customer_name VARCHAR(255),
+    date DATE DEFAULT CURRENT_DATE,
+    valid_until DATE,
+    amount NUMERIC(15, 2) DEFAULT 0.00,
+    total_amount NUMERIC(15, 2) DEFAULT 0.00,
+    status VARCHAR(64) DEFAULT 'Draft',
+    items JSONB DEFAULT '[]'::jsonb,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 10. SALES: INVOICES, RETURNS, DELIVERY CHALLANS & RECEIPTS
 CREATE TABLE IF NOT EXISTS public.sales_invoices (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
@@ -223,7 +283,6 @@ CREATE TABLE IF NOT EXISTS public.sales_invoices (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 14. SALES RETURNS
 CREATE TABLE IF NOT EXISTS public.sales_returns (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
@@ -239,14 +298,41 @@ CREATE TABLE IF NOT EXISTS public.sales_returns (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 15. PURCHASE BILLS & RETURNS
-CREATE TABLE IF NOT EXISTS public.purchase_bills (
+CREATE TABLE IF NOT EXISTS public.sales_return_receipts (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    bill_no VARCHAR(64) NOT NULL,
+    receipt_no VARCHAR(64) NOT NULL,
+    return_no VARCHAR(64),
+    customer_id BIGINT,
+    customer_name VARCHAR(255),
+    amount NUMERIC(15, 2) DEFAULT 0.00,
+    payment_mode VARCHAR(64) DEFAULT 'Cash',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.delivery_challans (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    challan_no VARCHAR(64) NOT NULL,
+    invoice_no VARCHAR(64),
+    customer_name VARCHAR(255),
+    dispatch_warehouse VARCHAR(255),
+    items JSONB DEFAULT '[]'::jsonb,
+    status VARCHAR(64) DEFAULT 'Pending',
+    is_printed BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 11. PURCHASES: SUPPLIER PURCHASES, GRN & RETURNS
+CREATE TABLE IF NOT EXISTS public.supplier_purchases (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    purchase_no VARCHAR(64),
+    po_no VARCHAR(64),
     vendor_id BIGINT,
     vendor_name VARCHAR(255),
-    bill_date DATE DEFAULT CURRENT_DATE,
+    purchase_date DATE DEFAULT CURRENT_DATE,
     items JSONB DEFAULT '[]'::jsonb,
     total_amount NUMERIC(15, 2) DEFAULT 0.00,
     paid_amount NUMERIC(15, 2) DEFAULT 0.00,
@@ -266,35 +352,130 @@ CREATE TABLE IF NOT EXISTS public.purchase_returns (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 16. CRM LEADS & QUOTATIONS
-CREATE TABLE IF NOT EXISTS public.leads (
+CREATE TABLE IF NOT EXISTS public.purchase_return_receipts (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    customer_name VARCHAR(255) NOT NULL,
+    receipt_no VARCHAR(64),
+    return_no VARCHAR(64),
+    vendor_name VARCHAR(255),
+    amount NUMERIC(15, 2) DEFAULT 0.00,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.grn_receipts (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    grn_no VARCHAR(64) NOT NULL,
+    vendor_id BIGINT,
+    vendor_name VARCHAR(255),
+    inward_challan_no VARCHAR(64),
+    status VARCHAR(64) DEFAULT 'Received',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.grn_items (
+    id BIGSERIAL PRIMARY KEY,
+    grn_id BIGINT,
+    product_id BIGINT,
+    product_name VARCHAR(255),
+    quantity NUMERIC(15, 2) DEFAULT 0.00,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. BANKING, CHART OF ACCOUNTS & FINANCIAL VOUCHERS
+CREATE TABLE IF NOT EXISTS public.chart_of_accounts (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    account_code VARCHAR(32) NOT NULL,
+    account_title VARCHAR(255) NOT NULL,
+    control_code VARCHAR(64),
+    category_code VARCHAR(64),
+    sub_category_code VARCHAR(64),
+    account_type VARCHAR(64),
+    opening_balance NUMERIC(15, 2) DEFAULT 0.00,
+    balance_nature VARCHAR(16) DEFAULT 'Debit',
+    notes TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.banks (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    "bankName" VARCHAR(255) NOT NULL,
+    "accountTitle" VARCHAR(255) NOT NULL,
+    "accountNumber" VARCHAR(64) NOT NULL,
+    branch VARCHAR(128),
+    iban VARCHAR(64),
+    "initialBalance" NUMERIC(15, 2) DEFAULT 0.00,
+    "currentBalance" NUMERIC(15, 2) DEFAULT 0.00,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.financial_vouchers (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    voucher_no VARCHAR(64) NOT NULL,
+    voucher_type VARCHAR(32) NOT NULL,
+    voucher_date DATE DEFAULT CURRENT_DATE,
+    account_code VARCHAR(32),
+    account_title VARCHAR(255),
+    debit NUMERIC(15, 2) DEFAULT 0.00,
+    credit NUMERIC(15, 2) DEFAULT 0.00,
+    narration TEXT,
+    salesman_id BIGINT,
+    bank_id BIGINT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 13. AUDIT LOGS
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    action_type VARCHAR(64),
+    table_name VARCHAR(64),
+    performed_by VARCHAR(128),
+    details JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 14. HUMAN RESOURCES (HR)
+CREATE TABLE IF NOT EXISTS public.hr_employees (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    name VARCHAR(255) NOT NULL,
+    designation VARCHAR(128),
     phone VARCHAR(64),
-    status VARCHAR(64) DEFAULT 'New',
-    requirement TEXT,
+    email VARCHAR(128),
+    basic_salary NUMERIC(15, 2) DEFAULT 0.00,
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS public.quotations (
+CREATE TABLE IF NOT EXISTS public.hr_attendance (
     id BIGSERIAL PRIMARY KEY,
     tenant_id VARCHAR(64) DEFAULT 'bashir',
-    quotation_no VARCHAR(64) NOT NULL,
-    customer_name VARCHAR(255) NOT NULL,
-    items JSONB DEFAULT '[]'::jsonb,
-    total_amount NUMERIC(15, 2) DEFAULT 0.00,
-    status VARCHAR(32) DEFAULT 'Draft',
+    employee_id BIGINT,
+    attendance_date DATE DEFAULT CURRENT_DATE,
+    status VARCHAR(32) DEFAULT 'Present',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 17. PERMISSIONS & DATA API GRANTS
+CREATE TABLE IF NOT EXISTS public.hr_pay_heads (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'bashir',
+    name VARCHAR(128) NOT NULL,
+    type VARCHAR(64) DEFAULT 'Earnings',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 15. PERMISSIONS & DATA API GRANTS
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
 
--- 18. PERMISSIVE RLS POLICIES FOR DEMO OPERATION
+-- 16. PERMISSIVE RLS POLICIES FOR ALL TABLES
 DO $$
 DECLARE
     r RECORD;
@@ -306,7 +487,7 @@ BEGIN
     END LOOP;
 END $$;
 
--- 19. INITIAL DEMO SEED DATA
+-- 17. INITIAL STARTER SEED DATA
 INSERT INTO public.tenants (slug, name, email)
 VALUES
     ('bashir', 'NHT ENTERPRISE - Master', 'admin@nhtenterprise.com'),
@@ -317,6 +498,12 @@ INSERT INTO public.companies (name, address, phone)
 VALUES
     ('NHT ENTERPRISE (Main Showroom)', 'Plot 12-A, Commercial Area, Hyderabad', '0300-1234567'),
     ('Al-Madina Traders', 'Shop # 4, Ceramic Market, Saddar', '0312-7654321')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.inventory_locations (name, address, description)
+VALUES
+    ('Main Warehouse (Site A)', 'Industrial Zone, Hyderabad', 'Primary central inventory warehouse'),
+    ('City Center Showroom', 'Commercial Market, Saddar', 'Retail and display stock')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.inventory_uom (short_code, full_name, category)
@@ -362,4 +549,10 @@ VALUES
     ('Matte Grey Subway Tile 30x60', 'Wall Tiles', 'Master Tiles', 'SQFT', 140.00, 185.00, 850.00, 50.00),
     ('One-Piece Smart Commode Ivory', 'Sanitary Ware', 'Porta', 'EACH', 18500.00, 24000.00, 25.00, 5.00),
     ('Single Lever Basin Mixer Chrome', 'Bath Fittings', 'Sonex', 'EACH', 4200.00, 5800.00, 60.00, 10.00)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.crm_leads (client, contact, phone, interest, est_value, stage, notes)
+VALUES
+    ('Apex Construction - Gulberg Tower', 'Engr. Tariq', '0300-1122334', 'Porcelain Floor Tiles 60x120 (3,500 sqft)', 840000.00, 'Quotation Sent', 'Quotation submitted with 5% discount option'),
+    ('Hassan Residency Bathroom Renovation', 'Mr. Hassan', '0313-9988776', 'Sanitary Ware & Bath Fittings', 165000.00, 'New Inquiry', 'Wants modern wall-hung commodes and chrome mixers')
 ON CONFLICT DO NOTHING;
