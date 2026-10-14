@@ -1,0 +1,48 @@
+import { Toaster } from 'react-hot-toast';
+import Navigation from './Navigation/Routing';
+import { ModalProvider } from './Context/Modal';
+import { useEffect } from 'react';
+import { initializeSocket } from './service/socket';
+import { AuthProvider } from './Context/Auth';
+import { ThemeColorProvider } from './Context/ThemeColor';
+import Alert from './pages/Alert';
+
+function App() {
+  useEffect(() => {
+    initializeSocket();
+  }, []);
+  return (
+    <ThemeColorProvider>
+      <AuthProvider>
+        <ModalProvider>
+          <Navigation />
+        <Toaster
+          position="top-center"
+          containerStyle={{ zIndex: 999999999 }}
+          toastOptions={{
+            duration: 4000,
+            style: {
+              fontSize: '13px',
+              fontWeight: 500,
+              padding: '12px 16px',
+              borderRadius: '8px',
+              maxWidth: '500px',
+            },
+            success: {
+              duration: 3500,
+            },
+            error: {
+              duration: 5000,
+            },
+          }}
+        />
+        <Alert />
+      </ModalProvider>
+    </AuthProvider>
+  </ThemeColorProvider>
+  );
+}
+
+export default App;
+
+
