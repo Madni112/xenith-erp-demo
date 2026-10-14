@@ -128,6 +128,9 @@ const AddCustomer: React.FC = () => {
       const parsedOpeningBal = Number(values.openingBalance || 0);
       const computedBalance = values.balanceNature === 'Credit' ? -Math.abs(parsedOpeningBal) : Math.abs(parsedOpeningBal);
 
+      const regTypeVal = values.registrationType || 'Retail / General';
+      const secPhoneVal = values.secondaryPhone ? values.secondaryPhone.trim() : '';
+
       const payload: any = {
         customerName: trimmedName,
         customer_code: cleanCode,
@@ -135,10 +138,10 @@ const AddCustomer: React.FC = () => {
         account_code: cleanCode,
         page_no: values.page_no ? String(values.page_no).trim() : '',
         pageNo: values.page_no ? String(values.page_no).trim() : '',
-        registrationType: values.registrationType || 'Retail / General',
+        registrationType: regTypeVal,
         primaryPhone: values.primaryPhone ? values.primaryPhone.trim() : '',
         phone: values.primaryPhone ? values.primaryPhone.trim() : '',
-        secondaryPhone: values.secondaryPhone ? values.secondaryPhone.trim() : '',
+        secondaryPhone: secPhoneVal,
         email: values.email ? values.email.trim() : '',
         website: values.website ? values.website.trim() : '',
         province: values.province || 'Sindh',
@@ -158,23 +161,44 @@ const AddCustomer: React.FC = () => {
 
       let customerRecordId = editData?.id;
 
-      if (isEditMode) {
-        const { error } = await supabase
-          .from('customers')
-          .update(payload)
-          .eq('id', editData.id);
+      // Self-healing database executor: handles schema cache column casing mismatches automatically
+      const executeSave = async (dataPayload: any) => {
+        if (isEditMode) {
+          return await supabase
+            .from('customers')
+            .update(dataPayload)
+            .eq('id', editData.id);
+        } else {
+          return await supabase
+            .from('customers')
+            .insert([dataPayload])
+            .select('id');
+        }
+      };
 
-        if (error) throw error;
+      let saveResponse = await executeSave(payload);
+
+      // Auto-fallback if schema cache rejects specific casing (e.g. registrationType -> registrationtype)
+      if (saveResponse.error && (saveResponse.error.code === 'PGRST204' || saveResponse.error.message?.includes('schema cache'))) {
+        const fallbackPayload = { ...payload };
+        if (saveResponse.error.message?.includes('registrationType')) {
+          delete fallbackPayload.registrationType;
+          fallbackPayload.registrationtype = regTypeVal;
+        }
+        if (saveResponse.error.message?.includes('secondaryPhone')) {
+          delete fallbackPayload.secondaryPhone;
+          fallbackPayload.secondaryphone = secPhoneVal;
+        }
+        saveResponse = await executeSave(fallbackPayload);
+      }
+
+      if (saveResponse.error) throw saveResponse.error;
+
+      if (isEditMode) {
         toast.success(`Customer "${trimmedName}" updated successfully!`);
       } else {
-        const { data: insertedData, error } = await supabase
-          .from('customers')
-          .insert([payload])
-          .select('id');
-
-        if (error) throw error;
-        if (insertedData && insertedData[0]) {
-          customerRecordId = insertedData[0].id;
+        if (saveResponse.data && saveResponse.data[0]) {
+          customerRecordId = saveResponse.data[0].id;
         }
         toast.success(`Customer "${trimmedName}" registered successfully!`);
       }
