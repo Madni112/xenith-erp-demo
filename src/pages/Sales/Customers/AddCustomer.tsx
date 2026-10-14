@@ -181,14 +181,10 @@ const AddCustomer: React.FC = () => {
       // Auto-fallback if schema cache rejects specific casing (e.g. registrationType -> registrationtype)
       if (saveResponse.error && (saveResponse.error.code === 'PGRST204' || saveResponse.error.message?.includes('schema cache'))) {
         const fallbackPayload = { ...payload };
-        if (saveResponse.error.message?.includes('registrationType')) {
-          delete fallbackPayload.registrationType;
-          fallbackPayload.registrationtype = regTypeVal;
-        }
-        if (saveResponse.error.message?.includes('secondaryPhone')) {
-          delete fallbackPayload.secondaryPhone;
-          fallbackPayload.secondaryphone = secPhoneVal;
-        }
+        delete fallbackPayload.registrationType;
+        fallbackPayload.registrationtype = regTypeVal;
+        delete fallbackPayload.secondaryPhone;
+        fallbackPayload.secondaryphone = secPhoneVal;
         saveResponse = await executeSave(fallbackPayload);
       }
 
